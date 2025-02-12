@@ -7,8 +7,10 @@ public class ItemPickup : MonoBehaviour
 {
     public Button takeButton; // Кнопка подбора предмета
     public Button dropButton; // Кнопка сброса предмета
+    public Button throwButton; // Кнопка броска предмета
     public float maxPickupDistance = 5f; // Максимальное расстояние до объекта для подбора
     public Transform holdPoint; // Точка, где фиксируется предмет (например, перед камерой)
+    public float throwForce = 10f; // Сила броска
 
     private GameObject heldItem = null; // Текущий удерживаемый предмет
 
@@ -17,10 +19,12 @@ public class ItemPickup : MonoBehaviour
         // Скрываем кнопки по умолчанию
         takeButton.gameObject.SetActive(false);
         dropButton.gameObject.SetActive(false);
+        throwButton.gameObject.SetActive(false);
 
         // Подписываемся на события кнопок
         takeButton.onClick.AddListener(PickupItem);
         dropButton.onClick.AddListener(DropItem);
+        throwButton.onClick.AddListener(ThrowItem);
     }
 
     void Update()
@@ -41,13 +45,11 @@ public class ItemPickup : MonoBehaviour
         {
             if (hit.collider.CompareTag("Drag"))
             {
-                // Если нашли объект с тегом "Drag", показываем кнопку подбора
                 takeButton.gameObject.SetActive(true);
                 return;
             }
         }
 
-        // Если ничего не нашли, скрываем кнопку подбора
         takeButton.gameObject.SetActive(false);
     }
 
@@ -62,20 +64,18 @@ public class ItemPickup : MonoBehaviour
             {
                 heldItem = hit.collider.gameObject;
 
-                // Отключаем физику у объекта
                 Rigidbody rb = heldItem.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
                     rb.isKinematic = true;
                 }
 
-                // Фиксируем объект перед камерой
                 heldItem.transform.position = holdPoint.position;
                 heldItem.transform.rotation = holdPoint.rotation;
                 heldItem.transform.parent = holdPoint;
 
-                // Показываем кнопку сброса, скрываем кнопку подбора
                 dropButton.gameObject.SetActive(true);
+                throwButton.gameObject.SetActive(true);
                 takeButton.gameObject.SetActive(false);
             }
         }
@@ -85,19 +85,37 @@ public class ItemPickup : MonoBehaviour
     {
         if (heldItem != null)
         {
-            // Включаем физику у объекта
             Rigidbody rb = heldItem.GetComponent<Rigidbody>();
             if (rb != null)
             {
                 rb.isKinematic = false;
             }
 
-            // Отпускаем объект
             heldItem.transform.parent = null;
             heldItem = null;
 
-            // Скрываем кнопку сброса
             dropButton.gameObject.SetActive(false);
+            throwButton.gameObject.SetActive(false);
+        }
+    }
+
+    private void ThrowItem()
+    {
+        if (heldItem != null)
+        {
+            Rigidbody rb = heldItem.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                heldItem.transform.parent = null;
+
+                // Применяем силу вперед от позиции holdPoint
+                rb.AddForce(holdPoint.forward * throwForce, ForceMode.VelocityChange);
+            }
+
+            heldItem = null;
+            dropButton.gameObject.SetActive(false);
+            throwButton.gameObject.SetActive(false);
         }
     }
 }
